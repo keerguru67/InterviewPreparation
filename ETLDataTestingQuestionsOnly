@@ -1,3 +1,22 @@
 Q1. Tell me about yourself
 Q2. Roles & Responsibilities in currnet project
 Q3. List out some source systems you worked in current project?
+Q4. how will you validate if source is having 2000 records and target is having 1800 records?
+Q5. what is CTE function write a query using it.
+Q6. write a query using windows functions?
+Q7. lead and lag function explanation?
+Q8. a table which will be having daily transactions I want to get the tran amount of the today's latest transaction for example I have done 4 transaction 
+consider tran eff_dt.
+Q9. In you project what are all the meetings and agile approaches followed?
+Q10. What is fact & Dimension Table which table will be loaded first fact or Dimension table
+Q11. how will you insert or update records without upsert
+Q12. what is a surrogate key explain?
+Q13. what is SCD type2 and how it is used in you project?
+Q14. what is the unix command you use to find a apac file?
+Q15. Unix command to replace the file name or content
+Q16. Unix command to find a string in a file?
+Q17. Challenging use case you have faced in you project explain?
+Q18. Explain Test Automation using poython, pandas and pytest
+Q19. What is the difference between Teststrategy document and test plan
+Q20. 
+
