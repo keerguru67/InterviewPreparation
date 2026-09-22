@@ -1,1 +1,330 @@
+Q1. Tell me about yourself
+Q2. Roles & Responsibilities in currnet project
+Q3. List out some source systems you worked in current project?
+
+Source systems I have worked with
+Oracle – Customer, account, transaction and reference data
+Teradata – Enterprise data warehouse and downstream reporting data
+Mainframe / DB2 – Legacy banking and transaction data
+Flat files – CSV, TXT, fixed-width files received through batch interfaces
+SQL Server – Application and operational data
+REST/API sources – Data received from application APIs
+Kafka – Streaming/event-based transaction data
+S3 – Cloud-based files used as source/input for ETL pipelines
+BigQuery – Cloud data warehouse/source for analytical datasets
+Hive/Hadoop – Big-data source tables and distributed datasets
+
+In my current project, I have worked with multiple source systems depending on the data flow. The major sources include Oracle, Teradata, mainframe/DB2, SQL Server, flat files such as CSV and fixed-width files, and cloud-based sources such as S3 and BigQuery.
+
+For some data pipelines, we also consume data through APIs and streaming sources such as Kafka. My responsibility as an ETL QA engineer is to validate the source-to-target data flow, perform source-to-target reconciliation, verify transformation rules, check record counts and aggregates, validate incremental and delta loads, and ensure data quality in the target warehouse.
+
+Q4. how will you validate if source is having 2000 records and target is having 1800 records?
+
+1. Validate source and target counts
+
+SELECT COUNT(*) FROM source_table;
+SELECT COUNT(*) FROM target_table;
+
+Confirm that the counts are actually 2,000 and 1,800.
+
+2. Check the ETL mapping and business rules
+I would verify whether the ETL has any filters, joins, lookups, or business rules that intentionally exclude records.
+Check rejected/error records
+I would check the ETL reject/error tables and session logs to see whether the 200 records were rejected because of data-quality issues, nulls, invalid formats, duplicate keys, etc.
+
+3. Identify the exact missing records
+I would compare the source and target using the business key.
+
+For example:
+
+SELECT s.customer_id
+FROM source_table s
+LEFT JOIN target_table t
+  ON s.customer_id = t.customer_id
+WHERE t.customer_id IS NULL;
+
+This will help identify the source records that are missing in the target.
+
+4. Analyze the 200 missing records
+I would categorize them:
+Filtered by business rule
+Rejected due to invalid data
+Duplicate records
+Failed lookup/join
+Failed transformation
+Already loaded in a previous incremental run
+ETL/job failure
+5. Validate transformation and joins
+If the mapping contains inner joins, I would check whether the 200 records are being eliminated because matching records are unavailable in lookup/reference tables.
+Check batch/job logs
+I would verify the ETL session/job status, rejected-record count, source file count, commit/rollback information, and any errors.
+Perform source-to-target reconciliation
+After identifying the reason for the difference, I would determine whether the 200-record difference is expected according to the business requirement.
+
+note: If the requirement says all 2,000 source records must reach the target and there is no valid exclusion rule, then the missing 200 records would be treated as a defect.
+
+5. If the interviewer asks "What if there are no filters or business rules?", say:
+
+"Then I would identify the exact 200 missing business keys, trace those records through the ETL flow, check joins/lookups and reject tables, and determine where they were dropped. If the records are not rejected or intentionally excluded and the job completed successfully, I would raise a defect with the evidence from source, target, logs, and reconciliation results."
+
+Q5. what is CTE function write a query using it
+
+CTE stands for Common Table Expression. It is a temporary result set created using the WITH clause. I use CTEs to break complex queries into smaller logical steps, especially for reconciliation, duplicate identification, aggregation, and source-to-target validation. A CTE exists only for the duration of that SQL statement."
+
+Question: Find IT employees whose salary is greater than 70,000.
+
+WITH IT_Employees AS (
+    SELECT emp_id, emp_name, salary
+    FROM employee
+    WHERE department = 'IT'
+)
+SELECT emp_id, emp_name, salary
+FROM IT_Employees
+WHERE salary > 70000;
+
+Output:
+
+102  Priya  80000
+104  Divya  90000
+ETL interview example
+
+A useful ETL-testing example is finding duplicate records:
+
+WITH Duplicate_Customers AS (
+    SELECT customer_id, COUNT(*) AS record_count
+    FROM source_customer
+    GROUP BY customer_id
+    HAVING COUNT(*) > 1
+)
+SELECT *
+FROM Duplicate_Customers;
+
+Q6. write a query using windows functions?
+"Find the highest salary employee in each department."
+
+Example using ROW_NUMBER()
+SELECT emp_id,
+       emp_name,
+       department,
+       salary
+FROM (
+    SELECT emp_id,
+           emp_name,
+           department,
+           salary,
+           ROW_NUMBER() OVER (
+               PARTITION BY department
+               ORDER BY salary DESC
+           ) AS rn
+    FROM employee
+) t
+WHERE rn = 1;
+How it works
+ROW_NUMBER() OVER (
+    PARTITION BY department
+    ORDER BY salary DESC
+)
+PARTITION BY department → creates a separate group for each department.
+ORDER BY salary DESC → highest salary gets number 1.
+ROW_NUMBER() → assigns a sequence number to each row.
+WHERE rn = 1 → returns the highest-paid employee from each department.
+Another very important ETL interview example: duplicate records
+SELECT *
+FROM (
+    SELECT customer_id,
+           customer_name,
+           ROW_NUMBER() OVER (
+               PARTITION BY customer_id
+               ORDER BY updated_date DESC
+           ) AS rn
+    FROM customer
+) t
+WHERE rn > 1;
+
+This identifies duplicate customer records, keeping the latest record as rn = 1.
+
+Other window functions you should know
+Function	Common use
+ROW_NUMBER()	Assign unique sequence numbers
+RANK()	Ranking with gaps for ties
+DENSE_RANK()	Ranking without gaps
+LEAD()	Compare with the next record
+LAG()	Compare with the previous record
+SUM() OVER()	Running/cumulative totals
+COUNT() OVER()	Count records without collapsing rows
+
+Interview tip: For an 8+ year ETL QA role, be prepared to explain ROW_NUMBER, RANK, DENSE_RANK, LAG, and LEAD with real data-validation scenarios.
+
+Q7. lead and lag function explanation
+LAG is used to access the previous row and LEAD is used to access the next row without using a self-join. In ETL testing, I can use them to compare consecutive transactions, identify changes between records, validate sequence-based transformations, and perform source-to-target data validation."
+
+Q8. a table which will be having daily transactions I want to get the tran amount of the today's latest transaction for example I have done 4 transaction consider tran eff_dt
+
+If your table has multiple transactions for the same day/customer, and you want the transaction amount of today's latest transaction based on tran_eff_dt, you can use ROW_NUMBER().
+
+Assume the table is:
+
+transactions
+
+customer_id	tran_id	tran_eff_dt	tran_amount
+101	T001	2026-09-22 09:10	500
+101	T002	2026-09-22 11:30	800
+101	T003	2026-09-22 14:20	1200
+101	T004	2026-09-22 16:45	900
+
+You want T004 → 900, because it is today's latest transaction.
+
+Query using ROW_NUMBER()
+SELECT customer_id,
+       tran_id,
+       tran_eff_dt,
+       tran_amount
+FROM (
+    SELECT customer_id,
+           tran_id,
+           tran_eff_dt,
+           tran_amount,
+           ROW_NUMBER() OVER (
+               PARTITION BY customer_id
+               ORDER BY tran_eff_dt DESC
+           ) AS rn
+    FROM transactions
+    WHERE TRUNC(tran_eff_dt) = TRUNC(SYSDATE)
+) t
+WHERE rn = 1;
+If you only want today's latest transaction amount
+SELECT tran_amount
+FROM (
+    SELECT tran_amount,
+           ROW_NUMBER() OVER (
+               ORDER BY tran_eff_dt DESC
+           ) AS rn
+    FROM transactions
+    WHERE TRUNC(tran_eff_dt) = TRUNC(SYSDATE)
+) t
+WHERE rn = 1;
+
+Result:
+
+900
+
+Q9. In you project what are all the meetings and agile approaches followed?
+"We follow Agile Scrum. The key ceremonies are Sprint Planning, Daily Stand-up, Backlog Refinement, Sprint Review, and Sprint Retrospective. We also have defect triage and requirement/technical discussions as needed. As an ETL QA, I participate from requirement refinement itself, understand source-to-target mappings and business rules, prepare test scenarios and data, execute ETL validation, track defects, and provide testing status during the sprint."
+
+Sprint Planning
+We discuss the user stories planned for the sprint, understand the requirements and acceptance criteria, identify testing dependencies, and estimate the QA effort.
+Daily Stand-up
+Every day, I provide updates on what I completed yesterday, what I am working on today, and any blockers or dependencies. For example, I may discuss ETL job availability, test-data issues, or environment problems.
+Backlog Refinement / Grooming
+Before the sprint, we review upcoming stories in detail. I clarify business rules, source-to-target mappings, transformation logic, and acceptance criteria so that the stories are testable.
+Sprint Review / Demo
+At the end of the sprint, the team demonstrates the completed functionality to the product owner or business stakeholders. QA provides the testing status and discusses any relevant defects or observations.
+Sprint Retrospective
+We discuss what went well, what did not go well, and what improvements we can make in the next sprint. For example, we may decide to improve test-data preparation or automate repetitive validation activities.
+Defect Triage / Bug Calls
+When required, QA, developers, BAs, and other stakeholders discuss defects based on severity, business impact, root cause, and priority.
+Requirement / Technical Discussion
+For complex ETL changes, we have discussions with developers and BAs to understand source systems, target tables, transformation rules, dependencies, and data-flow architecture.
+
+From the QA perspective, I follow the Agile testing approach throughout the sprint rather than waiting until the end. I review requirements early, prepare test scenarios and test data, perform source-to-target validation, execute functional and regression testing, log defects, participate in defect discussions, and provide the testing status to the team.
+
+For ETL testing specifically, I validate record counts, data completeness, transformations, joins and lookups, duplicate records, null handling, data types, incremental/delta loads, and source-to-target reconciliation.
+
+Q10. What is fact & Dimension Table which table will be loaded first fact or Dimension table
+A Dimension table contains descriptive information such as customer, product, account, and date attributes, whereas a Fact table contains measurable business events such as transactions, sales, payments, and their corresponding measures.
+
+For example, Customer Dimension may contain customer name, city, and customer key, while Transaction Fact may contain transaction amount, transaction date, and customer key.
+
+Generally, dimensions are loaded before facts because the Fact table contains foreign keys that reference the Dimension tables. So the typical loading sequence is staging, dimensions, and then fact tables.
+
+As an ETL tester, I would also validate the dimension key lookups before validating the fact load, and ensure that every valid foreign key in the fact table maps to the appropriate dimension record.
+
+Squece: Source → Staging → Dimension → Fact
+
+Q11. how will you insert or update records without upsert
+In an ETL project, records don't necessarily need to be inserted or updated manually by a user. The ETL workflow can automatically perform the operation based on business keys. For example, we can use an Insert/Update transformation in Informatica, or use a SQL MERGE statement. If the business key already exists in the target, we update the record; if it doesn't exist, we insert it.
+
+Q12. what is a surrogate key explain?
+A surrogate key is a system-generated unique identifier used in a data warehouse, mainly in dimension tables. It does not have any business meaning.
+
+For example, the source may have customer_id = C1001, but the warehouse Customer Dimension may generate customer_sk = 101. The fact table will use customer_sk as the foreign key.
+
+Surrogate keys are especially useful for Slowly Changing Dimension Type 2 because when a customer's attribute changes, we create a new dimension record with a new surrogate key while retaining the old record for historical reporting.
+
+As an ETL tester, I validate that the surrogate key is uniquely generated, the correct surrogate key is assigned during dimension lookup, and the fact table receives the correct dimension key.
+
+Q13. what is SCD type2 and how it is used in you project?4
+SCD Type 2 is used to maintain the complete historical information of changes in a dimension.
+
+In my project, we used SCD Type 2 for customer or account-related dimensions where changes such as address, customer status, or other business attributes needed to be historically tracked.
+
+For example, if a customer was initially associated with Chennai and later moved to Bangalore, we would not overwrite the existing Chennai record. We would expire the old record by updating its end date and current flag, and then insert a new record with a new surrogate key, the new Bangalore value, a new effective date, and current flag as 'Y'.
+
+As an ETL tester, I validate that the old record is correctly expired, the new record is inserted with a new surrogate key, effective and end dates are correct, only one record is marked as current, and the historical record remains unchanged.
+
+SCD = Slowly Changing Dimension.
+
+SCD Type 2 is used when we want to maintain the complete history of changes to a dimension record.
+
+For example, suppose a customer initially lives in Chennai and later moves to Bangalore.
+
+Instead of updating the Chennai record, SCD Type 2 expires the old record and creates a new record.
+
+Customer SK	Customer ID	Customer Name	City	Effective Date	End Date	Current Flag
+101	C1001	Ravi	Chennai	2026-01-01	2026-06-30	N
+205	C1001	Ravi	Bangalore	2026-07-01	NULL	Y
+
+Here:
+
+Customer ID = business key
+Customer SK = surrogate key
+Effective Date = when this version became valid
+End Date = when this version stopped being valid
+Current Flag = identifies the latest record
+How it works in an ETL project
+
+Suppose today's source record is:
+
+C1001 | Ravi | Bangalore
+
+But the target currently contains:
+
+C1001 | Ravi | Chennai | Current_Flag = Y
+
+During ETL processing:
+
+Step 1 – Identify the existing record
+
+The ETL looks up customer_id = C1001.
+
+Step 2 – Compare attributes
+
+It compares the source city with the existing dimension record.
+
+Source:  Bangalore
+Target:  Chennai
+
+Since the value has changed, it is treated as a new version.
+
+Step 3 – Expire the old record
+
+UPDATE customer_dim
+SET end_date = CURRENT_DATE - 1,
+    current_flag = 'N'
+WHERE customer_id = 'C1001'
+  AND current_flag = 'Y';
+
+Step 4 – Insert the new version
+
+INSERT INTO customer_dim
+(customer_sk, customer_id, customer_name, city,
+ effective_date, end_date, current_flag)
+VALUES
+(205, 'C1001', 'Ravi', 'Bangalore',
+ CURRENT_DATE, NULL, 'Y');
+
+Q14. what is the unix command you use to find a particular system in the fi
+
+
+
 
